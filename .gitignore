@@ -1,0 +1,48 @@
+# ===== Signing materials (NEVER commit) =====
+sign/
+
+# ===== Backup & experiment snapshots =====
+_spike_backup/
+
+# ===== Build outputs =====
+**/build/
+**/.cxx/
+**/oh_modules/
+**/node_modules/
+**/.gradle/
+
+# ===== IDE / Editor =====
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+
+# ===== Tool config =====
+.qoder/
+AGENTS.md
+
+# ===== hvigor cache =====
+ohos/.hvigor/
+ohos/.appanalyzer/
+
+# ===== Local config =====
+**/local.properties
+
+# ===== Go build artifacts =====
+go/arkmesh-core/libarkmesh_core.so
+go/arkmesh-core/libarkmesh_core.h
+
+# ===== OpenSSL third-party source & build artifacts =====
+# Obtained via build scripts, not committed
+ohos/entry/src/main/cpp/third_party/openssl/
+ohos/entry/src/main/cpp/third_party/openssl_install/
+ohos/entry/src/main/cpp/third_party/openssl-*.tar.gz
+ohos/entry/src/main/cpp/third_party/openssl_stub/
+
+# ===== Go .so prebuilt artifacts in OHOS project =====
+ohos/entry/src/main/cpp/third_party/go/
+
+# ===== OS files =====
+.DS_Store
+Thumbs.db

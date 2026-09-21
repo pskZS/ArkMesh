@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ArkMesh 隐私政策</title>
+<style>
+  body { font-family: -apple-system, "HarmonyOS Sans", "Microsoft YaHei", sans-serif; max-width: 720px; margin: 0 auto; padding: 2rem 1rem; line-height: 1.8; color: #333; }
+  h1 { font-size: 1.5rem; border-bottom: 2px solid #0a59f7; padding-bottom: 0.5rem; }
+  h2 { font-size: 1.1rem; margin-top: 2rem; color: #0a59f7; }
+  .meta { color: #888; font-size: 0.9rem; }
+  ul { padding-left: 1.5rem; }
+  li { margin-bottom: 0.3rem; }
+</style>
+</head>
+<body>
+
+<h1>ArkMesh 隐私政策</h1>
+<p class="meta">更新日期：2026年9月20日</p>
+
+<h2>1. 数据收集</h2>
+<ul>
+  <li>本应用不收集、存储或传输任何个人身份信息。</li>
+  <li>您输入的 Headscale 服务器地址和配置信息仅存储在本地设备。</li>
+</ul>
+
+<h2>2. 权限使用说明</h2>
+<ul>
+  <li><strong>INTERNET（网络访问）</strong>：用于与 Headscale 服务器通信及建立 VPN 隧道。</li>
+  <li><strong>GET_NETWORK_INFO（网络信息）</strong>：用于检测当前网络状态和切换。</li>
+  <li><strong>KEEP_BACKGROUND_RUNNING（后台运行）</strong>：用于维持 VPN 连接不中断。</li>
+</ul>
+
+<h2>3. 数据传输</h2>
+<ul>
+  <li>所有 VPN 流量通过您自建的 Headscale 服务器，不经过本应用开发者的服务器。</li>
+  <li>控制面通信使用 Noise 协议加密。</li>
+  <li>数据隧道使用 WireGuard 协议加密。</li>
+</ul>
+
+<h2>4. 本地存储</h2>
+<ul>
+  <li>服务器地址、设备名称等配置存储在应用沙箱中。</li>
+  <li>加密密钥存储在设备安全区域。</li>
+</ul>
+
+<h2>5. 第三方服务</h2>
+<ul>
+  <li>本应用不使用任何第三方分析、广告或追踪 SDK。</li>
+  <li>STUN 服务器用于 NAT 穿透（可配置）。</li>
+</ul>
+
+<h2>6. 开源声明</h2>
+<p>本应用完全开源，代码接受社区审查。</p>
+
+<h2>7. 联系方式</h2>
+<p>如有隐私相关问题，请通过 GitHub Issues 联系。</p>
+
+</body>
+</html>
