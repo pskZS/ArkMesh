@@ -1,0 +1,30 @@
+# HarmonyOS Build Output
+build/
+.gradle/
+.idea/
+*.iml
+local.properties
+
+# Native Build
+entry/.cxx/
+entry/src/main/cpp/.externalNativeBuild/
+entry/src/main/cpp/build/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+*.swp
+*.swo
+
+# Dependencies
+node_modules/
+oh_modules/
+
+# Generated files
+entry/build/

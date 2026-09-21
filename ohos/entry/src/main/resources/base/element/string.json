@@ -1,0 +1,20 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "ArkMesh 鸿蒙版客户端"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "ArkMesh 鸿蒙版客户端"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "ArkMesh"
+    },
+    {
+      "name": "ArkMeshVpnAbility_desc",
+      "value": "ArkMesh VPN 扩展能力"
+    }
+  ]
+}

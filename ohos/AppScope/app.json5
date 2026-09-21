@@ -1,0 +1,12 @@
+{
+  "app": {
+    "bundleName": "com.arkmesh.client",
+    "vendor": "ArkMesh",
+    // versionName 是对用户展示的版本号(初版 < 1.0.0); versionCode 只要求随安装
+    // 单调递增, 真机上还装着旧的 1000000 包, 降 code 会被判为降级而拒装。
+    "versionCode": 1000001,
+    "versionName": "0.9.0",
+    "icon": "$media:app_icon",
+    "label": "$string:app_name"
+  }
+}

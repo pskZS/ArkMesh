@@ -1,0 +1,77 @@
+{
+  "app": {
+    "products": [
+      {
+        "name": "default",
+        "signingConfig": "default",
+        "compatibleSdkVersion": "6.1.0(23)",
+        "runtimeOS": "HarmonyOS",
+        "targetSdkVersion": "6.1.1(24)",
+        "buildOption": {
+          "nativeCompiler": "BiSheng"
+        }
+      },
+      {
+        "name": "release",
+        "signingConfig": "release",
+        "compatibleSdkVersion": "6.1.0(23)",
+        "runtimeOS": "HarmonyOS",
+        "targetSdkVersion": "6.1.1(24)",
+        "buildOption": {
+          "nativeCompiler": "BiSheng"
+        }
+      }
+    ],
+    "buildModeSet": [
+      {
+        "name": "debug"
+      },
+      {
+        "name": "release"
+      }
+    ],
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "",
+          "keyAlias": "",
+          "keyPassword": "",
+          "profile": "",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "",
+          "storePassword": ""
+        }
+      },
+      {
+        "name": "release",
+        "type": "HarmonyOS",
+        "material": {
+          "storeFile": "",
+          "storePassword": "",
+          "keyAlias": "",
+          "keyPassword": "",
+          "signAlg": "SHA256withECDSA",
+          "profile": "",
+          "certpath": ""
+        }
+      }
+    ]
+  },
+  "modules": [
+    {
+      "name": "entry",
+      "srcPath": "./entry",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default",
+            "release"
+          ]
+        }
+      ]
+    }
+  ]
+}
