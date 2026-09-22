@@ -63,8 +63,8 @@ type ohosTun struct {
 	// 应答包。MagicDNS 不通时靠这两个数区分"系统根本没把 DNS 送进隧道"和
 	// "送进来了但 Go 侧没应答"。lastQ/lastR 记最近一包的域名和应答码, 随
 	// stats() 进状态快照, 不用翻沙箱里的 Go 日志就能定位解析失败。
-	dnsQ atomic.Uint64
-	dnsR atomic.Uint64
+	dnsQ  atomic.Uint64
+	dnsR  atomic.Uint64
 	dnsMu sync.Mutex
 	lastQ string
 	lastR string
@@ -380,7 +380,7 @@ func buildDNSQuery(srcIP netip.Addr, name string) ([]byte, error) {
 	putU16(ip[6:], 0)                             // flags + fragment offset
 	ip[8] = 64                                    // TTL
 	ip[9] = 17                                    // protocol = UDP
-	putU16(ip[10:], 0) // checksum, 稍后填
+	putU16(ip[10:], 0)                            // checksum, 稍后填
 	copy(ip[12:16], srcIP.AsSlice())
 	copy(ip[16:20], dstIP.AsSlice())
 	putU16(ip[10:], ipChecksum(ip))
@@ -399,8 +399,8 @@ func udpChecksum(src, dst netip.Addr, udp []byte) uint16 {
 		sum += uint32(sb[i])<<8 | uint32(sb[i+1])
 		sum += uint32(db[i])<<8 | uint32(db[i+1])
 	}
-	sum += 17                    // protocol
-	sum += uint32(len(udp))      // udp length
+	sum += 17               // protocol
+	sum += uint32(len(udp)) // udp length
 	for i := 0; i+1 < len(udp); i += 2 {
 		sum += uint32(udp[i])<<8 | uint32(udp[i+1])
 	}
