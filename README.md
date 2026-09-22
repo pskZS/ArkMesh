@@ -124,7 +124,6 @@ headscale preauthkeys create --reusable --expiration 90d
 
 ### 已知限制
 
-- **数据面 TODO**: WireGuard 隧道内的数据包收发仍在开发中
 - **DERP 中继**: 已内置 DERP 客户端，但中继路径取决于服务端配置
 - **Split DNS**: OHOS 平台限制，第三方 App 无法解析 mesh 内部域名
 - **模拟器**: 不支持 VPN Extension，必须使用真机测试

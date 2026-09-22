@@ -222,8 +222,7 @@ export default class ArkMeshVpnAbility extends VpnExtensionAbility {
       console.info(`[GoTunnel] 第1步 无 TUN 注册已启动 exitNode=${exitNode !== '' ? exitNode : '(无)'}`)
       const st1 = await this.pollGoCore('注册', 90000)
       if (st1 === null) {
-        this.publishFailure('接入控制面失败或超时, 详见 hilog [GoTunnel]')
-        return
+        return // 具体失败原因已由 pollGoCore 发布到状态文件
       }
       const nodeIPs: string[] = st1.nodeIPs !== undefined ? st1.nodeIPs : []
       if (nodeIPs.length === 0) {
@@ -263,8 +262,7 @@ export default class ArkMeshVpnAbility extends VpnExtensionAbility {
       console.info('[GoTunnel] 第3步 带 TUN 重建 tsnet 已受理')
       const st2 = await this.pollGoCore('重建', 90000)
       if (st2 === null) {
-        this.publishFailure('带 TUN 重建隧道失败或超时, 详见 hilog [GoTunnel]')
-        return
+        return // 具体失败原因已由 pollGoCore 发布到状态文件
       }
       this.isRunning = true
       this.startGoStatsTicker()
@@ -302,6 +300,8 @@ export default class ArkMeshVpnAbility extends VpnExtensionAbility {
   }
 
   // 轮询 Go 核心状态直到 up / failed / 超时。成功返回解析后的状态, 否则 null。
+  // 失败/超时时直接把真实原因发布到状态文件, 首页能看到"为什么连不上",
+  // 而不是只有一句笼统的"接入控制面失败"。
   private async pollGoCore(label: string, timeoutMs: number): Promise<GoCoreStatus | null> {
     const deadline = Date.now() + timeoutMs
     while (Date.now() < deadline) {
@@ -313,19 +313,47 @@ export default class ArkMeshVpnAbility extends VpnExtensionAbility {
       } catch (err) {
         const e = err as BusinessError
         console.error(`[GoTunnel] ${label} status 解析失败(${e.message}): ${raw}`)
+        this.publishFailure(`${label}状态解析失败: ${e.message}`)
         return null
       }
       if (st.state === 'up') {
         return st
       }
       if (st.state === 'failed') {
-        console.error(`[GoTunnel] FAIL ${label}失败: ${st.error !== undefined ? st.error : '(无 error 字段)'}`)
+        const rawErr: string = st.error !== undefined && st.error !== '' ? st.error : '(无 error 字段)'
+        console.error(`[GoTunnel] FAIL ${label}失败: ${rawErr}`)
+        this.publishFailure(ArkMeshVpnAbility.describeFailure(rawErr))
         return null
       }
       console.info(`[GoTunnel] ${label}中... state=${st.state}`)
     }
     console.error(`[GoTunnel] FAIL ${label} ${timeoutMs}ms 超时仍未就绪`)
+    this.publishFailure(`${label}超时(${Math.round(timeoutMs / 1000)}s 未就绪), 请检查网络后重试`)
     return null
+  }
+
+  // 把 Go 侧的原始报错翻译成用户能看懂的中文提示, 原始信息截断后附在后面,
+  // 方便截图反馈时定位问题。模式取自真机上实际见过的失败场景:
+  // 密钥无效/过期(最常见)、地址写错、网络不通、证书问题。
+  private static describeFailure(raw: string): string {
+    const lower = raw.toLowerCase()
+    let hint = ''
+    if (lower.includes('authkey') || lower.includes('preauth') || lower.includes('401')
+      || lower.includes('403') || lower.includes('unauthorized') || lower.includes('invalid key')) {
+      hint = '预授权密钥无效或已过期, 请在设置中更换新密钥'
+    } else if (lower.includes('no such host') || lower.includes('server misbehaving')) {
+      hint = '服务器域名解析失败, 请检查控制面地址是否写错'
+    } else if (lower.includes('connection refused')) {
+      hint = '服务器拒绝连接, 请检查控制面地址和端口'
+    } else if (lower.includes('x509') || lower.includes('certificate') || lower.includes('tls')) {
+      hint = 'TLS 证书校验失败, 请检查服务器证书配置'
+    } else if (lower.includes('timeout') || lower.includes('unreachable')) {
+      hint = '网络连接超时或不可达, 请检查当前网络能否访问服务器'
+    } else if (lower.includes('404')) {
+      hint = '地址可访问但不是 Headscale 服务, 请检查 URL 路径'
+    }
+    const brief: string = raw.length > 120 ? raw.substring(0, 120) + '…' : raw
+    return hint !== '' ? `${hint} (${brief})` : `连接失败: ${brief}`
   }
 
   // state 变 up 的那一刻, netmap 往往还是从磁盘缓存加载的(peers=0), 真 netmap
