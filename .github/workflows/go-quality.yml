@@ -1,0 +1,40 @@
+name: Go quality gate
+
+on:
+  push:
+    paths:
+      - 'go/**'
+      - '.github/workflows/go-quality.yml'
+  pull_request:
+    paths:
+      - 'go/**'
+      - '.github/workflows/go-quality.yml'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: go/arkmesh-core
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+          cache-dependency-path: go/arkmesh-core/go.sum
+
+      - name: gofmt
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "::error::these files need gofmt:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: probe tests (host)
+        run: go test -v -run TestProbesOnHost ./...
