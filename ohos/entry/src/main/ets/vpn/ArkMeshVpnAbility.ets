@@ -428,6 +428,11 @@ export default class ArkMeshVpnAbility extends VpnExtensionAbility {
   // 为什么不能直接让 UI 调 coreControlStatus: UI 进程 dlopen 的是它自己那份
   // libarkmesh_core.so, 里面没有 tsnet 实例, 永远返回 idle。真实状态只活在扩展
   // 进程里, 所以落到共享沙箱的一个 JSON 文件, 让 UI 轮询。
+  // 为什么 boot 快照必须抢在任何 Go 调用之前: coreControlStatus() 是同步 NAPI, 本进程
+  // 第一次调它会 dlopen libarkmesh_core.so 并冷启动 Go 运行时, 装机后的第一次可达十几
+  // 秒。而 UI 把"快照文件不存在/没更新"读成"扩展进程没起来", 宽限窗口一到就把界面退回
+  // "未连接" —— 用户看到的就是"点连接转一会儿自己变回去, 再点一次就好了"。先写这一行,
+  // UI 才能区分"进程还没起"和"核心正在加载"。
   private initStatusStore(): void {
     let dir = ''
     try {
@@ -438,7 +443,9 @@ export default class ArkMeshVpnAbility extends VpnExtensionAbility {
       return
     }
     this.statusStore = new TunnelStatusStore(dir)
-    this.publishStatus()
+    const boot: GoCoreStatus = { state: 'boot' }
+    this.statusStore.write(boot)
+    console.info('[GoTunnel] boot 快照已落盘, 状态定时器启动')
     if (this.statusTimer === -1) {
       this.statusTimer = setInterval(() => this.publishStatus(), 2000)
     }
@@ -457,12 +464,15 @@ export default class ArkMeshVpnAbility extends VpnExtensionAbility {
     }
     // 顺带处理 UI 发来的探针请求, 再把最近一次探针结果塞进快照。放在这里是因为
     // 这个 2s 循环本来就在跑, 复用它读一个小文件比另起定时器省资源。
+    // 心跳先落盘, 再去跑探针: 探针是同步的(最长 3s×N)且跑在扩展主线程上, 会把这条 2s
+    // 心跳挤掉; UI 侧 8s 读不到更新就认为隧道停了, 表现为"已连接 → 自己断开 → 又已连接"。
+    store.write(st)
     this.handleDnsProbeRequest(st)
     if (this.lastDnsProbe !== '') {
       st.dnsProbe = this.lastDnsProbe
       st.dnsProbeSeq = this.lastDnsProbeSeq
+      store.write(st)
     }
-    store.write(st)
   }
 
   // 读 UI 的探针请求文件; 有新的 seq 就同步跑一次探针(隧道内注入合成查询)。
@@ -492,6 +502,8 @@ export default class ArkMeshVpnAbility extends VpnExtensionAbility {
   // 连接就绪后自动跑一次 MagicDNS 探针(本机 DNSName + 第一个在线 peer),
   // 让用户不点任何按钮也能在设置页看到 mesh 名到底能不能解析。
   private runAutoDnsProbe(): void {
+    // 探针同步跑在主线程上, 先把心跳续上再跑, 免得 UI 在这几秒里以为扩展掉了。
+    this.publishStatus()
     const result: string = arkmeshNative.coreDnsProbe('', 3000)
     this.lastDnsProbe = result
     this.lastDnsProbeSeq = 0

@@ -424,7 +424,10 @@ func controlStatusJSON() string {
 	}
 
 	if srv != nil && state == "up" {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		// 这个函数是同步跑在扩展进程主线程上的, 而主线程还负责每 2s 往状态文件里写心跳。
+		// 预算给到 10s 时, LocalAPI 稍慢一点就能让快照断供超过 UI 的 8s 过期阈值,
+		// 界面上表现为"已连接 → 自己断开 → 又已连接"。这里只取一次状态, 2s 足够。
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 		if lc, err := srv.LocalClient(); err == nil {
 			if st, err := lc.Status(ctx); err == nil {
@@ -697,7 +700,9 @@ func controlDnsProbe(name string, timeout time.Duration) string {
 		timeout = 3 * time.Second
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	// 调用方是扩展进程主线程(同步 NAPI), 探针本身还要跑 3s×N, 这里再给 10s 就会
+	// 把 2s 心跳饿到 UI 的过期阈值之外。取状态只为挑探针目标, 4s 足够。
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
 	defer cancel()
 	lc, err := srv.LocalClient()
 	if err != nil {

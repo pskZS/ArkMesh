@@ -14,9 +14,14 @@ import { Palette, Type, Space, Radius, Size, Icon, Tone, toneIcon } from '../com
 import { copyText } from '../common/Clipboard'
 import { requestDiagnostics } from '../common/UiBus'
 
-// 点了"连接"到扩展进程真正写出第一份状态快照之间的容忍窗口。扩展要冷启动 +
-// dlopen Go 核心, 慢的时候要好几秒, 这期间读到的还是上一轮的旧快照。
-const START_GRACE_MS = 20000
+// 点了"连接"到扩展进程真正写出第一份状态快照之间的容忍窗口。扩展要冷启动 + dlopen
+// Go 核心 + 初始化 Go 运行时, 装机后的第一次这一步最慢(真机上见过十几秒), 20s 会把
+// 它误判成"没连上"并把界面退回未连接 —— 那正是"首次连接失败、再点一次就好"的成因。
+const START_GRACE_MS = 60000
+
+// 快照连续过期几档才认定扩展进程没了。扩展主线程跑同步探针/状态查询时可能挤掉一次
+// 2s 心跳, 只过期一次就翻转显示会让用户看到"已连接 → 自己断开 → 又已连接"。
+const STALE_FLIP_HITS = 2
 
 // 概览页: 只回答用户最关心的三件事 —— 连没连上、连的是谁、怎么开关。
 // 隧道状态一律以扩展进程写的快照为准, 这里不做乐观翻转。
@@ -35,6 +40,7 @@ export struct HomeView {
   @State authKey: string = ''
   private statusTimerId: number = -1
   private pendingStartAt: number = 0
+  private staleHits: number = 0
   private store: TunnelStatusStore | null = null
 
   aboutToAppear() {
@@ -158,21 +164,30 @@ export struct HomeView {
     }
     const snap: TunnelSnapshot | null = store.read()
     if (snap === null) {
+      this.staleHits = 0
       this.showNoTunnel('未连接')
       return
     }
     // stopped 是扩展 onDestroy 亲手写的最后一句话, 不参与过期判定 —— 否则正常断开
     // 8s 后会被下面的 stale 分支改写成"隧道已停止", 听起来像出了故障。
     if (snap.core.state === 'stopped') {
+      this.staleHits = 0
       this.showNoTunnel('已断开')
       return
     }
-    // 快照过期说明扩展进程已经不在了(被系统回收或崩溃), 这时绝不能继续显示"已连接"。
+    // 快照过期说明扩展进程可能已经不在了(被系统回收或崩溃), 这时不能继续显示"已连接"。
+    // 但一次过期不定罪: 扩展主线程被同步探针/状态查询占住时会漏掉一档心跳, 要连续
+    // STALE_FLIP_HITS 档都没更新才翻转, 否则就是"已连接自己闪断一下"那个现象。
     if (Date.now() - snap.updatedAt > SNAPSHOT_STALE_MS) {
+      this.staleHits++
+      if (this.staleHits < STALE_FLIP_HITS) {
+        return
+      }
       this.showNoTunnel('隧道已停止')
       return
     }
 
+    this.staleHits = 0
     this.pendingStartAt = 0
     const core: GoCoreStatus = snap.core
     if (core.state === 'up') {
@@ -210,8 +225,14 @@ export struct HomeView {
       this.statusDetail = core.error !== undefined && core.error !== '' ? core.error : '隧道未能建立'
       return
     }
-    // idle / starting / reattaching: 扩展已经起来了但隧道还没就绪
+    // boot / idle / starting / reattaching: 扩展已经起来了但隧道还没就绪
     this.status = ArkMeshStatus.CONNECTING
+    if (core.state === 'boot') {
+      // 扩展进程活着, Go 核心还在 dlopen + 运行时初始化
+      this.statusMessage = '正在加载核心'
+      this.statusDetail = '首次安装后这一趟最慢, 请稍候'
+      return
+    }
     this.statusMessage = core.state === 'reattaching' ? '正在重建隧道' : '正在连接'
     this.statusDetail = '扩展进程已就绪, 等待隧道建立'
   }
@@ -220,10 +241,22 @@ export struct HomeView {
   // 扩展冷启动 + dlopen Go 核心要好几秒, 这期间读到的还是上一轮的旧快照,
   // 直接按"未连接"渲染会让按钮闪一下。
   private showNoTunnel(msg: string): void {
-    if (this.pendingStartAt !== 0 && Date.now() - this.pendingStartAt < START_GRACE_MS) {
-      this.status = ArkMeshStatus.CONNECTING
-      this.statusMessage = '正在启动隧道'
-      this.statusDetail = '正在拉起后台扩展进程'
+    if (this.pendingStartAt !== 0) {
+      const waited: number = Date.now() - this.pendingStartAt
+      if (waited < START_GRACE_MS) {
+        this.status = ArkMeshStatus.CONNECTING
+        this.statusMessage = '正在启动隧道'
+        this.statusDetail = '正在拉起后台扩展进程'
+        return
+      }
+      // 点了连接、宽限窗口用满, 扩展进程却在共享沙箱里一句话都没留 —— 这是真失败,
+      // 不能静默退回"未连接", 否则用户只能靠"再点一次居然好了"去猜。
+      const secs: number = Math.round(waited / 1000)
+      this.pendingStartAt = 0
+      this.status = ArkMeshStatus.ERROR
+      this.statusMessage = '连接失败'
+      this.statusDetail = `后台隧道进程 ${secs}s 内没有响应, 这次没能拉起。请再点一次连接; ` +
+        '若反复如此, 先看诊断里"核心/网络检测"两项'
       return
     }
     this.status = ArkMeshStatus.DISCONNECTED
