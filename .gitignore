@@ -1,5 +1,8 @@
 # ===== Signing materials (NEVER commit) =====
 sign/
+# App-level build profile carries signingConfig passwords + local cert paths.
+# Track the sanitized build-profile.template.json5 instead.
+ohos/build-profile.json5
 
 # ===== Backup & experiment snapshots =====
 _spike_backup/

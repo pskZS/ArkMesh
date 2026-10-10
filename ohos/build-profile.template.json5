@@ -1,0 +1,58 @@
+// build-profile.template.json5 — 复制为 ohos/build-profile.json5 后使用
+//
+// signingConfigs 留空是有意的：签名口令与证书路径不入版本库。
+// 恢复方式（二选一）：
+//   1. DevEco Studio → File → Project Structure → Signing Configs → 勾选 Automatically generate signature
+//      （IDE 会自行把 signingConfigs 写回本文件）
+//   2. 从本地备份手动填入 material{} 各字段
+// 写回后 `git status` 不会显示该文件，它已被 .gitignore 排除。
+{
+  "app": {
+    "products": [
+      {
+        "name": "default",
+        "signingConfig": "default",
+        "compatibleSdkVersion": "6.1.0(23)",
+        "runtimeOS": "HarmonyOS",
+        "targetSdkVersion": "6.1.1(24)",
+        "buildOption": {
+          "nativeCompiler": "BiSheng"
+        }
+      },
+      {
+        "name": "release",
+        "signingConfig": "release",
+        "compatibleSdkVersion": "6.1.0(23)",
+        "runtimeOS": "HarmonyOS",
+        "targetSdkVersion": "6.1.1(24)",
+        "buildOption": {
+          "nativeCompiler": "BiSheng"
+        }
+      }
+    ],
+    "buildModeSet": [
+      {
+        "name": "debug"
+      },
+      {
+        "name": "release"
+      }
+    ],
+    "signingConfigs": []
+  },
+  "modules": [
+    {
+      "name": "entry",
+      "srcPath": "./entry",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default",
+            "release"
+          ]
+        }
+      ]
+    }
+  ]
+}
